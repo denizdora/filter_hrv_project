@@ -1,0 +1,7 @@
+streamlit
+neurokit2
+matplotlib
+numpy
+PyWavelets
+scipy
+pandas
