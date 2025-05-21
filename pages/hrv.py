@@ -114,7 +114,7 @@ normal_rr = np.diff(full_rpeaks) / sampling_rate
 with st.expander("Abnormal Rhythm Simulations"):
 
     # Toggle only for Irregular ECG
-    show_irregular = st.checkbox("Generate 'Irregular' ECG")
+    show_irregular = st.checkbox("Generate 'Irregular' ECG (15 BPM variation)", value=False)
 
     # Prepare placeholders for Irregular R-peaks
     irreg_ecg_full = None
