@@ -812,142 +812,100 @@ ymax = 1.7
 st.markdown("---")
 st.subheader("Time & Frequency Domain Comparison")
 
-T_VIS = 10  # seconds to show in time domain comparison
-idx_vis = int(T_VIS * fs)
-
-# Row 1: Clean ECG
-col1, col2 = st.columns(2)
-
-with col1:
-    fig_clean_time, ax_clean_time = plt.subplots(figsize=(6, 3))
-    ax_clean_time.plot(time[:idx_vis], ecg_clean[:idx_vis], color="blue")
-    ax_clean_time.set_title("Clean ECG (Time Domain, First 10s)")
-    ax_clean_time.set_xlabel("Time (s)")
-    ax_clean_time.set_ylabel("Amplitude")
-    ax_clean_time.set_ylim(ymin, ymax)
-    ax_clean_time.axhline(0, color='black', linewidth=0.5)
-    ax_clean_time.grid(True, linestyle='--', alpha=0.5)
-    st.pyplot(fig_clean_time)
-
-with col2:
-    fig_clean_psd, ax_clean_psd = plt.subplots(figsize=(6, 3))
-    ax_clean_psd.semilogy(f_clean_sym, Pxx_clean_sym, color="blue")
-    ax_clean_psd.set_title("Clean ECG (Power Spectral Density)")
-    ax_clean_psd.set_xlabel("Frequency (Hz)")
-    ax_clean_psd.set_ylabel("Power/Frequency")
-    ax_clean_time.set_xlim(0, T_VIS)
-    ax_clean_psd.set_xlim(-100, 100)
-    ax_clean_psd.grid(True, linestyle="--", alpha=0.5)
-    st.pyplot(fig_clean_psd)
-
-
-# Row 2: Noisy ECG
-col3, col4 = st.columns(2)
-
-with col3:
-    fig_noisy_time, ax_noisy_time = plt.subplots(figsize=(6, 3))
-    ax_noisy_time.plot(time[:idx_vis], ecg_noisy[:idx_vis], color="red", alpha=0.7)
-    ax_noisy_time.set_title("Noisy ECG (Time Domain, First 10s)")
-    ax_noisy_time.set_xlabel("Time (s)")
-    ax_noisy_time.set_ylabel("Amplitude")
-    ax_noisy_time.set_ylim(ymin, ymax)
-    ax_noisy_time.axhline(0, color='black', linewidth=0.5)
-    ax_noisy_time.grid(True, linestyle='--', alpha=0.5)
-    st.pyplot(fig_noisy_time)
-
-with col4:
-    fig_noisy_psd, ax_noisy_psd = plt.subplots(figsize=(6, 3))
-    ax_noisy_psd.semilogy(f_noisy_sym, Pxx_noisy_sym, color="red")
-    ax_noisy_psd.set_title("Noisy ECG (Power Spectral Density)")
-    ax_noisy_psd.set_xlabel("Frequency (Hz)")
-    ax_noisy_psd.set_ylabel("Power/Frequency")
-    ax_noisy_time.set_xlim(0, T_VIS)
-    ax_noisy_psd.set_xlim(-100, 100)
-    ax_noisy_psd.grid(True, linestyle="--", alpha=0.5)
-    st.pyplot(fig_noisy_psd)
-
-# Row 3: Filtered ECG
-col5, col6 = st.columns(2)
-
-with col5:
-    fig_filt_time, ax_filt_time = plt.subplots(figsize=(6, 3))
-    if ecg_filtered is not None:
-        ax_filt_time.plot(time[:idx_vis], ecg_filtered[:idx_vis], color="green")
-        ax_filt_time.set_title("Filtered ECG (Time Domain, First 10s)")
-    else:
-        ax_filt_time.set_title("Filtered ECG (Unavailable)")
-    ax_filt_time.set_xlabel("Time (s)")
-    ax_filt_time.set_ylabel("Amplitude")
-    ax_filt_time.set_xlim(0, T_VIS)
-    ax_filt_time.set_ylim(ymin, ymax)
-    ax_filt_time.axhline(0, color='black', linewidth=0.5)
-    ax_filt_time.grid(True, linestyle='--', alpha=0.5)
-    st.pyplot(fig_filt_time)
-
-with col6:
-    fig_filt_psd, ax_filt_psd = plt.subplots(figsize=(6, 3))
-    if ecg_filtered is not None:
-        ax_filt_psd.semilogy(f_filtered_sym, Pxx_filtered_sym, color="green")
-        ax_filt_psd.set_title("Filtered ECG (Power Spectral Density)")
-    else:
-        ax_filt_psd.set_title("Filtered ECG PSD (Unavailable)")
-    ax_filt_psd.set_xlabel("Frequency (Hz)")
-    ax_filt_psd.set_ylabel("Power/Frequency")
-    ax_filt_psd.set_xlim(-100, 100)
-    ax_filt_psd.grid(True, linestyle="--", alpha=0.5)
-    st.pyplot(fig_filt_psd)
+# --- 1. PRE-CALCULATE ALL PSDs TO FIND GLOBAL Y-LIMITS ---
+psd_results = {}
+signals_to_process = {
+    'clean': ecg_clean,
+    'noisy': ecg_noisy,
+    'filtered': ecg_filtered
+}
 
 if use_nonideal:
-        # Row 4: Non-Ideal (Raw Autocorr)
-    f_nonideal_raw, Pxx_nonideal_raw = welch(ecg_nonideal_raw, fs=fs, nperseg=1024)
-    f_raw_sym, Pxx_raw_sym = mirror_spectrum(f_nonideal_raw, Pxx_nonideal_raw)
+    ecg_nonideal_raw, _ = apply_nonideal_wiener_filter(ecg_noisy, wiener_order, wiener_symmetric)
+    ecg_nonideal_smooth, _ = apply_smoothed_wiener_filter(ecg_noisy, wiener_order, wiener_symmetric)
+    signals_to_process['nonideal_raw'] = ecg_nonideal_raw
+    signals_to_process['nonideal_smooth'] = ecg_nonideal_smooth
 
-    col7, col8 = st.columns(2)
-    with col7:
-        fig_raw_time, ax_raw_time = plt.subplots(figsize=(6, 3))
-        ax_raw_time.plot(time[:idx_vis], ecg_nonideal_raw[:idx_vis], color="orange")
-        ax_raw_time.set_title("Non-Ideal (Raw) - Time Domain")
-        ax_raw_time.set_xlabel("Time (s)")
-        ax_raw_time.set_ylabel("Amplitude")
-        ax_raw_time.set_xlim(0, T_VIS)
-        ax_raw_time.set_ylim(ymin, ymax)
-        ax_raw_time.axhline(0, color='black', linewidth=0.5)
-        ax_raw_time.grid(True, linestyle="--", alpha=0.5)
-        st.pyplot(fig_raw_time)
+for name, signal in signals_to_process.items():
+    if signal is not None:
+        f, Pxx = welch(signal, fs=fs, nperseg=1024)
+        f_sym, Pxx_sym = mirror_spectrum(f, Pxx)
+        psd_results[name] = {'f': f_sym, 'Pxx': Pxx_sym}
 
-    with col8:
-        fig_raw_psd, ax_raw_psd = plt.subplots(figsize=(6, 3))
-        ax_raw_psd.semilogy(f_raw_sym, Pxx_raw_sym, color="orange")
-        ax_raw_psd.set_title("Non-Ideal (Raw) - PSD")
-        ax_raw_psd.set_xlabel("Frequency (Hz)")
-        ax_raw_psd.set_ylabel("Power/Frequency")
-        ax_raw_psd.set_xlim(-100, 100)
-        ax_raw_psd.grid(True, linestyle="--", alpha=0.5)
-        st.pyplot(fig_raw_psd)
+# --- 2. DETERMINE THE SHARED Y-AXIS LIMITS FOR PSD PLOTS ---
+all_powers = []
+for data in psd_results.values():
+    all_powers.append(data['Pxx'])
 
-    # Row 5: Non-Ideal (Smoothed Estimate)
-    f_nonideal_smooth, Pxx_nonideal_smooth = welch(ecg_nonideal_smooth, fs=fs, nperseg=1024)
-    f_smooth_sym, Pxx_smooth_sym = mirror_spectrum(f_nonideal_smooth, Pxx_nonideal_smooth)
+# Concatenate all power values and find the min/max
+if all_powers:
+    concatenated_powers = np.concatenate(all_powers)
+    # Filter out zeros for log scale
+    positive_powers = concatenated_powers[concatenated_powers > 0]
+    if positive_powers.size > 0:
+        psd_ymin = positive_powers.min()
+        psd_ymax = concatenated_powers.max()
+    else:
+        psd_ymin, psd_ymax = 1e-9, 1.0 # Fallback
+else:
+    psd_ymin, psd_ymax = 1e-9, 1.0 # Fallback
 
-    col9, col10 = st.columns(2)
-    with col9:
-        fig_smooth_time, ax_smooth_time = plt.subplots(figsize=(6, 3))
-        ax_smooth_time.plot(time[:idx_vis], ecg_nonideal_smooth[:idx_vis], color="purple")
-        ax_smooth_time.set_title("Non-Ideal (Smoothed) - Time Domain")
-        ax_smooth_time.set_xlabel("Time (s)")
-        ax_smooth_time.set_ylabel("Amplitude")
-        ax_smooth_time.set_xlim(0, T_VIS)
-        ax_smooth_time.set_ylim(ymin, ymax)
-        ax_smooth_time.axhline(0, color='black', linewidth=0.5)
-        ax_smooth_time.grid(True, linestyle="--", alpha=0.5)
-        st.pyplot(fig_smooth_time)
+# --- 3. CREATE THE PLOTS USING A HELPER FUNCTION ---
 
-    with col10:
-        fig_smooth_psd, ax_smooth_psd = plt.subplots(figsize=(6, 3))
-        ax_smooth_psd.semilogy(f_smooth_sym, Pxx_smooth_sym, color="purple")
-        ax_smooth_psd.set_title("Non-Ideal (Smoothed) - PSD")
-        ax_smooth_psd.set_xlabel("Frequency (Hz)")
-        ax_smooth_psd.set_ylabel("Power/Frequency")
-        ax_smooth_psd.set_xlim(-100, 100)
-        ax_smooth_psd.grid(True, linestyle="--", alpha=0.5)
-        st.pyplot(fig_smooth_psd)
+T_VIS = 10  # seconds to show in time domain
+idx_vis = int(T_VIS * fs)
+time_vis = time[:idx_vis]
+
+# Fixed y-limits for time-domain plots for fair comparison
+time_ymin, time_ymax = min(np.min(ecg_clean), np.min(ecg_noisy)), max(np.max(ecg_clean), np.max(ecg_noisy))
+time_padding = (time_ymax - time_ymin) * 0.1
+time_ymin -= time_padding
+time_ymax += time_padding
+
+
+def create_comparison_row(title_prefix, signal_data, psd_data, color):
+    """Helper to create a row of plots to avoid code repetition."""
+    col1, col2 = st.columns(2)
+    
+    # Time Domain Plot
+    with col1:
+        fig_time, ax_time = plt.subplots(figsize=(7, 3.5))
+        if signal_data is not None:
+            ax_time.plot(time_vis, signal_data[:idx_vis], color=color, lw=1.2)
+            ax_time.set_title(f"{title_prefix} (Time Domain, First {T_VIS}s)")
+        else:
+            ax_time.set_title(f"{title_prefix} (Unavailable)")
+        ax_time.set_xlabel("Time (s)")
+        ax_time.set_ylabel("Amplitude")
+        ax_time.set_ylim(time_ymin, time_ymax)
+        ax_time.set_xlim(0, T_VIS)
+        ax_time.grid(True, linestyle=':', alpha=0.7)
+        st.pyplot(fig_time, clear_figure=True)
+
+    # Frequency Domain Plot
+    with col2:
+        fig_psd, ax_psd = plt.subplots(figsize=(7, 3.5))
+        if psd_data is not None:
+            ax_psd.semilogy(psd_data['f'], psd_data['Pxx'], color=color, lw=1.2)
+            ax_psd.set_title(f"{title_prefix} (Power Spectral Density)")
+            # Apply the shared y-limits here
+            ax_psd.set_ylim(psd_ymin * 0.1, psd_ymax * 1.5) # Add padding
+        else:
+            ax_psd.set_title(f"{title_prefix} PSD (Unavailable)")
+        ax_psd.set_xlabel("Frequency (Hz)")
+        ax_psd.set_ylabel("Power/Frequency (log scale)")
+        ax_psd.set_xlim(-fs / 2, fs / 2) # Limit to Nyquist frequency
+        ax_psd.grid(True, linestyle=':', alpha=0.7)
+        st.pyplot(fig_psd, clear_figure=True)
+
+
+# --- Plot each signal row ---
+create_comparison_row("Clean ECG", signals_to_process.get('clean'), psd_results.get('clean'), 'blue')
+create_comparison_row("Noisy ECG", signals_to_process.get('noisy'), psd_results.get('noisy'), 'red')
+create_comparison_row("Ideal Wiener Filtered", signals_to_process.get('filtered'), psd_results.get('filtered'), 'green')
+
+if use_nonideal:
+    st.markdown("---")
+    st.markdown("### Non-Ideal Filter Comparisons")
+    create_comparison_row("Non-Ideal (Raw Autocorr)", signals_to_process.get('nonideal_raw'), psd_results.get('nonideal_raw'), 'orange')
+    create_comparison_row("Non-Ideal (Smoothed)", signals_to_process.get('nonideal_smooth'), psd_results.get('nonideal_smooth'), 'purple')

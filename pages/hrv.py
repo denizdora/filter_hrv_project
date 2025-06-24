@@ -99,21 +99,72 @@ with col_b:
 # --------------------------------------------------------------
 # RR intervals & Poincaré plot
 # --------------------------------------------------------------
+# rr1 = np.diff(rpeaks1) / sampling_rate
+# rr2 = np.diff(rpeaks2) / sampling_rate
+
+# fig_poinc, axes = plt.subplots(1, 2, figsize=(12, 5))
+# axes = axes if isinstance(axes, np.ndarray) else [axes]
+
+# axes[0].scatter(rr1[:-1], rr1[1:], alpha=0.7, c="blue", label="ECG 1")
+# axes[0].set(xlabel="RR(n) [s]", ylabel="RR(n+1) [s]", title="Poincaré – ECG 1")
+# axes[0].grid(True)
+
+# axes[1].scatter(rr2[:-1], rr2[1:], alpha=0.7, c="orange", label="ECG 2")
+# axes[1].set(xlabel="RR(n) [s]", ylabel="RR(n+1) [s]", title="Poincaré – ECG 2")
+# axes[1].grid(True)
+
+# st.pyplot(fig_poinc)
+
+# --------------------------------------------------------------
+# RR intervals & Poincaré plot (Final version based on your original code)
+# --------------------------------------------------------------
 rr1 = np.diff(rpeaks1) / sampling_rate
 rr2 = np.diff(rpeaks2) / sampling_rate
 
+# --- Add a checkbox to control the behavior ---
+st.markdown("---")
+use_shared_axes = st.checkbox(
+    "Use shared axes for Poincaré comparison", 
+    value=True, 
+    help="Enable for a fair visual comparison of variability. Disable to zoom in on each plot individually."
+)
+
+# --- Plotting based on your original code structure ---
 fig_poinc, axes = plt.subplots(1, 2, figsize=(12, 5))
 axes = axes if isinstance(axes, np.ndarray) else [axes]
 
-axes[0].scatter(rr1[:-1], rr1[1:], alpha=0.7, c="blue", label="ECG 1")
-axes[0].set(xlabel="RR(n) [s]", ylabel="RR(n+1) [s]", title="Poincaré – ECG 1")
-axes[0].grid(True)
+# Plot for ECG 1 (your original code)
+axes[0].scatter(rr1[:-1], rr1[1:], alpha=0.7, c="blue", label="ECG 1")
+axes[0].set(xlabel="RR(n) [s]", ylabel="RR(n+1) [s]", title="Poincaré – ECG 1")
 
-axes[1].scatter(rr2[:-1], rr2[1:], alpha=0.7, c="orange", label="ECG 2")
-axes[1].set(xlabel="RR(n) [s]", ylabel="RR(n+1) [s]", title="Poincaré – ECG 2")
-axes[1].grid(True)
+# Plot for ECG 2 (your original code)
+axes[1].scatter(rr2[:-1], rr2[1:], alpha=0.7, c="orange", label="ECG 2")
+axes[1].set(xlabel="RR(n) [s]", ylabel="RR(n+1) [s]", title="Poincaré – ECG 2")
 
-st.pyplot(fig_poinc)
+# --- Apply common settings and the conditional shared limits ---
+# Set grid and a square aspect ratio for both plots
+for ax in axes:
+    ax.grid(True)
+    ax.set_aspect('equal', adjustable='box')
+
+# This is the new part: conditionally set shared axis limits if the checkbox is ticked
+if use_shared_axes and rr1.size > 1 and rr2.size > 1:
+    # Combine all data points to find the global range
+    all_rr_intervals = np.concatenate((rr1, rr2))
+    
+    # Find the overall minimum and maximum
+    min_lim = all_rr_intervals.min()
+    max_lim = all_rr_intervals.max()
+    
+    # Add 5% padding so points aren't on the edge
+    padding = (max_lim - min_lim) * 0.05
+    
+    # Apply the same calculated limits to both plots
+    for ax in axes:
+        ax.set_xlim(min_lim - padding, max_lim + padding)
+        ax.set_ylim(min_lim - padding, max_lim + padding)
+
+st.pyplot(fig_poinc)    
 
 # --------------------------------------------------------------
 # HRV Stats Summary
