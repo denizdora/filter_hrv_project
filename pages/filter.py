@@ -438,8 +438,8 @@ if use_nonideal:
 # --- Display Stats ---
 st.subheader("Signal Statistics & Filter Performance")
 
+# --- Standard Deviations ---
 col_stats1, col_stats2, col_stats3 = st.columns(3)
-
 with col_stats1:
     st.metric("Clean ECG Std Dev", f"{np.std(ecg_clean):.4f}")
 with col_stats2:
@@ -450,23 +450,46 @@ with col_stats3:
     else:
         st.metric("Filtered ECG Std Dev", "N/A")
 
-# Calculate MSE
-col_mse1, col_mse2 = st.columns(2)
-mse_noisy = np.mean((ecg_noisy - ecg_clean)**2)
-col_mse1.write(f"**MSE (Noisy vs Clean):** {mse_noisy:.6f}")
+# --- MSE Calculations & Display ---
+st.markdown("---") # Add a separator for clarity
 
+# Always show the baseline MSE for the noisy signal
+mse_noisy = np.mean((ecg_noisy - ecg_clean)**2)
+st.write(f"**MSE (Noisy vs Clean):** `{mse_noisy:.6f}` (This is our baseline error)")
+
+# Display MSE for the ideal filter
 if ecg_filtered is not None:
     mse_filtered = np.mean((ecg_filtered - ecg_clean)**2)
-    col_mse2.write(f"**MSE (Filtered vs Clean):** {mse_filtered:.6f}")
-    # Avoid division by zero or near-zero MSE values
+    st.write(f"**MSE (Ideal Filtered vs Clean):** `{mse_filtered:.6f}`")
     if mse_noisy > 1e-9 and mse_filtered > 1e-9:
         improvement = mse_noisy / mse_filtered
-        col_mse2.write(f"**MSE Improvement Factor:** {improvement:.2f}x")
-    else:
-         col_mse2.write(f"**MSE Improvement Factor:** N/A (MSE values too small)")
+        st.write(f"**MSE Improvement Factor (Ideal):** `{improvement:.2f}x`")
 else:
-    col_mse2.write("**MSE (Filtered vs Clean):** N/A (Filtering Failed)")
-    col_mse2.write("**MSE Improvement Factor:** N/A")
+    st.write("**MSE (Ideal Filtered vs Clean):** `N/A (Filtering Failed)`")
+
+# --- NEW: Display MSE for Non-Ideal Filters (if checkbox is ticked) ---
+if use_nonideal:
+    st.markdown("##### Non-Ideal Filter Performance")
+    
+    # 1. Non-Ideal (Raw Autocorrelation)
+    if ecg_nonideal_raw is not None:
+        mse_nonideal_raw = np.mean((ecg_nonideal_raw - ecg_clean)**2)
+        st.write(f"**MSE (Non-Ideal 'Raw' vs Clean):** `{mse_nonideal_raw:.6f}`")
+        if mse_noisy > 1e-9 and mse_nonideal_raw > 1e-9:
+            improvement_raw = mse_noisy / mse_nonideal_raw
+            st.write(f"**MSE Improvement Factor (Raw):** `{improvement_raw:.2f}x`")
+    else:
+        st.write("**MSE (Non-Ideal 'Raw' vs Clean):** `N/A`")
+
+    # 2. Non-Ideal (Smoothed Estimate)
+    if ecg_nonideal_smooth is not None:
+        mse_nonideal_smooth = np.mean((ecg_nonideal_smooth - ecg_clean)**2)
+        st.write(f"**MSE (Non-Ideal 'Smoothed' vs Clean):** `{mse_nonideal_smooth:.6f}`")
+        if mse_noisy > 1e-9 and mse_nonideal_smooth > 1e-9:
+            improvement_smooth = mse_noisy / mse_nonideal_smooth
+            st.write(f"**MSE Improvement Factor (Smoothed):** `{improvement_smooth:.2f}x`")
+    else:
+        st.write("**MSE (Non-Ideal 'Smoothed' vs Clean):** `N/A`")
 
 # # --- Hrv Analysis ---
 # st.subheader("Heart Rate Variability (HRV) Analysis")
